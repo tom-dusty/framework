@@ -1,3 +1,3 @@
 <!-- framework/pages/bye.php -->
 
-Bye <?php echo "GoodBye!"?>
+<?php echo "GoodBye!"?>
