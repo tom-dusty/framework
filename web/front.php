@@ -26,19 +26,21 @@ function render_template(Request $request)
 }
 
 $request = Request::createFromGlobals();
-$routes = include __DIR__ . '/../app.php';
+$routes = include __DIR__ . '/../src/app.php';
 
 $context = new Routing\RequestContext();
-$context->fromRequest($request);
 $matcher = new Routing\Matcher\UrlMatcher($routes, $context);
 $resolver = new HttpKernel\Controller\ControllerResolver();
 
 $dispatcher = new EventDispatcher();
-
+$dispatcher->addSubscriber(new HttpKernel\EventListener\RouterListener($matcher));
 $dispatcher->addSubscriber(new Simplex\GoogleListener());
 $dispatcher->addSubscriber(new Simplex\ContentLengthListener());
 
-$framework = new Framework($dispatcher, $matcher, $resolver);
+$listener = new HttpKernel\EventListener\ExceptionListener('Calendar\\Controller\\ErrorController::exceptionAction');
+$dispatcher->addSubscriber($listener);
+
+$framework = new Framework($dispatcher, $resolver);
 $framework = new HttpCache($framework, new Store(__DIR__.'/../cache'));
 
 $framework->handle($request)->send();
