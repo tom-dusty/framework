@@ -8,6 +8,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing;
 use Symfony\Component\HttpKernel;
+use Symfony\Component\HttpKernel\HttpCache\HttpCache;
+use Symfony\Component\HttpKernel\HttpCache\Store;
 use Simplex\Framework;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
@@ -37,7 +39,6 @@ $dispatcher->addSubscriber(new Simplex\GoogleListener());
 $dispatcher->addSubscriber(new Simplex\ContentLengthListener());
 
 $framework = new Framework($dispatcher, $matcher, $resolver);
+$framework = new HttpCache($framework, new Store(__DIR__.'/../cache'));
 
-$response = $framework->handle($request);
-
-$response -> send();
+$framework->handle($request)->send();
