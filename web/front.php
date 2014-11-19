@@ -1,43 +1,37 @@
 <?php
-// framework/front.php
 
-require_once __DIR__.'/../vendor/autoload.php';
+// framework.dev/web/front.php
+
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing;
+use Symfony\Component\HttpKernel;
+use Simplex\Framework;
 
-function render_template($request)
+function render_template(Request $request)
 {
     extract($request->attributes->all(), EXTR_SKIP);
     ob_start();
     if(isset($_GET['name']))
         $name = $_GET['name'];
 
-    include sprintf(__DIR__.'/../pages/%s.php', $_route);
+    include sprintf(__DIR__.'/../src/pages/%s.php', $_route);
 
     return new Response(ob_get_clean());
 }
 
 $request = Request::createFromGlobals();
-$routes = include __DIR__.'/../app.php';
-
+$routes = include __DIR__ . '/../app.php';
 
 $context = new Routing\RequestContext();
 $context->fromRequest($request);
 $matcher = new Routing\Matcher\UrlMatcher($routes, $context);
+$resolver = new HttpKernel\Controller\ControllerResolver();
 
-try {
-    $request->attributes->add($matcher->match($request->getPathInfo()));
-    $response = call_user_func($request->attributes->get('_controller'), $request);
-}
-catch (Routing\Exception\ResourceNotFoundException $e)
-{
-    $response = new Response('Not Found', 404);
-}
-catch (Exception $e)
-{
-    $response = new Response('An error occurred', 500);
-}
+$framework = new Framework($matcher, $resolver);
 
-$response->send();
+$response = $framework->handle($request);
+
+$response -> send();
