@@ -6,6 +6,8 @@ namespace Simplex\Tests;
 
 use Simplex\Framework;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Controller\ControllerResolver;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 
 class FrameworkTest extends \PHPUnit_Framework_TestCase
@@ -19,9 +21,44 @@ class FrameworkTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(404, $response->getStatusCode());
     }
 
+    public function testErrorHandling()
+    {
+        $framework = $this->getFrameworkForException(new \RuntimeException());
+
+        $response = $framework->handle(new Request());
+
+        $this->assertEquals(500, $response->getStatusCode());
+    }
+
+    public function testControllerResponse()
+    {
+        $matcher = $this->getMock('Symfony\Component\Routing\Matcher\UrlMatcherInterface');
+        $matcher
+            ->expects($this->once())
+            ->method('match')
+            ->will($this->returnValue(array(
+                '_route' => 'foo',
+                'name' => 'Fabien',
+                '_controller' => function ($name){
+                    return new Response('Hello '.$name);
+                }
+                )));
+
+        $resolver = new ControllerResolver();
+
+        $framework = new Framework($matcher, $resolver);
+
+        $request = new Request();
+
+        $response = $framework->handle(new Request());
+
+        $this->assertEquals(200, $response->getStatusCode());
+        $this->assertContains('Hello Fabien', $response->getContent());
+    }
+
     protected function getFrameworkForException($exception)
     {
-        $matcher = $this->getMock('Symfony\Component\Routing\Matcher\URLMatcherInterface');
+        $matcher = $this->getMock('Symfony\Component\Routing\Matcher\UrlMatcherInterface');
         $matcher
             ->expects($this->once())
             ->method('match')
