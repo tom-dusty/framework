@@ -9,16 +9,19 @@ use Symfony\Component\Routing;
 use Symfony\Component\HttpKernel;
 use Symfony\Component\Routing\Matcher\UrlMatcherInterface;
 use Symfony\Component\HttpKernel\Controller\ControllerResolverInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 class Framework
 {
     protected $matcher;
     protected $resolver;
+    protected $dispatcher;
 
-    public function __construct(UrlMatcherInterface $matcher, ControllerResolverInterface $resolver)
+    public function __construct(EventDispatcher $dispatcher, UrlMatcherInterface $matcher, ControllerResolverInterface $resolver)
     {
         $this->matcher = $matcher;
         $this->resolver = $resolver;
+        $this->dispatcher = $dispatcher;
     }
 
     public function handle(Request $request)
@@ -32,10 +35,15 @@ class Framework
             return call_user_func_array($controller, $arguments);
         }
         catch(Routing\Exception\ResourceNotFoundException $e){
-            return new Response('Not Found', 404);
+            $response =  new Response('Not Found', 404);
         }
         catch(\Exception $e){
-            return new Response('An error occurred', 500);
+            $response = new Response('An error occurred', 500);
         }
+
+        $this->dispatcher->dispatch('response', new ResponseEvent($response, $request));
+
+        return $response;
+
     }
 }
