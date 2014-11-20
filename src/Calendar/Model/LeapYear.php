@@ -6,9 +6,10 @@ namespace Calendar\Model;
 
 class LeapYear
 {
-    public function isLeapYear($year = null)
+    public function isLeapYear($year = 0)
     {
-        $year = (int)$_REQUEST['year'];
+        if(isset($_REQUEST['year']))
+            $year = (int)$_REQUEST['year'];
         if($year == 0)
         {
             $year = date('Y');

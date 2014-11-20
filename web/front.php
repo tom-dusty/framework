@@ -8,10 +8,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing;
 use Symfony\Component\HttpKernel;
-use Symfony\Component\HttpKernel\HttpCache\HttpCache;
-use Symfony\Component\HttpKernel\HttpCache\Store;
-use Simplex\Framework;
-use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\DependencyInjection\Reference;
 
 function render_template(Request $request)
 {
@@ -25,22 +22,19 @@ function render_template(Request $request)
     return new Response(ob_get_clean());
 }
 
+$sc = include __DIR__.'/../src/container.php';
+
+$sc->setParameter('debug', true);
+
+$sc->setParameter('charset', 'UTF-8');
+$sc->setParameter('routes', include __DIR__.'/../src/app.php');
+
+$sc->register('listener.string_response', 'Simplex\StringResponseListener');
+$sc->getDefinition('dispatcher')
+    ->addMethodCall('addSubscriber', array(new Reference('listener.string_response')));
+
 $request = Request::createFromGlobals();
-$routes = include __DIR__ . '/../src/app.php';
+$response = $sc->get('framework')->handle($request);
 
-$context = new Routing\RequestContext();
-$matcher = new Routing\Matcher\UrlMatcher($routes, $context);
-$resolver = new HttpKernel\Controller\ControllerResolver();
 
-$dispatcher = new EventDispatcher();
-$dispatcher->addSubscriber(new HttpKernel\EventListener\RouterListener($matcher));
-$dispatcher->addSubscriber(new Simplex\GoogleListener());
-$dispatcher->addSubscriber(new Simplex\ContentLengthListener());
-
-$listener = new HttpKernel\EventListener\ExceptionListener('Calendar\\Controller\\ErrorController::exceptionAction');
-$dispatcher->addSubscriber($listener);
-
-$framework = new Framework($dispatcher, $resolver);
-$framework = new HttpCache($framework, new Store(__DIR__.'/../cache'));
-
-$framework->handle($request)->send();
+$response->send();
